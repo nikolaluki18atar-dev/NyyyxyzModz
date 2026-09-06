@@ -1,0 +1,244 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+  RESELLER
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  REJECTED
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SUCCESS
+  CANCELLED
+}
+
+enum DeliveryStatus {
+  WAITING
+  DELIVERED
+  FAILED
+}
+
+model User {
+  id String @id @default(cuid())
+  name String
+  email String @unique
+  passwordHash String
+  whatsapp String?
+  role Role @default(CUSTOMER)
+  credit Int @default(0)
+  active Boolean @default(true)
+  emailVerifiedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  sessions Session[]
+  orders Order[]
+  activities Activity[]
+  wishlists Wishlist[]
+  resetTokens PasswordResetToken[]
+  verificationTokens EmailVerificationToken[]
+  creditTransactions CreditTransaction[]
+}
+model CreditTransaction {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  amount Int
+  balanceAfter Int
+  type String
+  note String?
+  createdAt DateTime @default(now())
+}
+model Refund {
+  id String @id @default(cuid())
+  orderId String @unique
+  order Order @relation(fields:[orderId], references:[id], onDelete:Cascade)
+  status String @default("REQUESTED")
+  amount Int
+  note String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model Wishlist {
+  id String @id @default(cuid())
+  userId String
+  productId String
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  product Product @relation(fields:[productId], references:[id], onDelete:Cascade)
+  createdAt DateTime @default(now())
+  @@unique([userId,productId])
+}
+model EmailVerificationToken {
+  id String @id @default(cuid())
+  token String @unique
+  userId String
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  expiresAt DateTime
+  usedAt DateTime?
+  createdAt DateTime @default(now())
+}
+model PasswordResetToken {
+  id String @id @default(cuid())
+  token String @unique
+  userId String
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  expiresAt DateTime
+  usedAt DateTime?
+  createdAt DateTime @default(now())
+}
+model Session {
+  id String @id @default(cuid())
+  token String @unique
+  userId String
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+model Category {
+  id String @id @default(cuid())
+  name String @unique
+  slug String @unique
+  description String?
+  active Boolean @default(true)
+  sort Int @default(0)
+  products Product[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model Product {
+  id String @id @default(cuid())
+  slug String @unique
+  name String
+  categoryId String?
+  category Category? @relation(fields:[categoryId], references:[id], onDelete:SetNull)
+  categoryName String
+  series String?
+  description String?
+  image String?
+  active Boolean @default(true)
+  featured Boolean @default(false)
+  sort Int @default(0)
+  variants ProductVariant[]
+  orderItems OrderItem[]
+  wishlists Wishlist[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model ProductVariant {
+  id String @id @default(cuid())
+  productId String
+  product Product @relation(fields:[productId], references:[id], onDelete:Cascade)
+  name String
+  price Int
+  resellerPrice Int?
+  active Boolean @default(true)
+  sort Int @default(0)
+  keys ProductKey[]
+  orderItems OrderItem[]
+  @@unique([productId,name])
+}
+model ProductKey {
+  id String @id @default(cuid())
+  variantId String
+  variant ProductVariant @relation(fields:[variantId], references:[id], onDelete:Cascade)
+  key String @unique
+  status String @default("AVAILABLE")
+  orderItemId String?
+  orderItem OrderItem? @relation(fields:[orderItemId], references:[id], onDelete:SetNull)
+  primaryOrder Order? @relation("OrderPrimaryKey")
+  createdAt DateTime @default(now())
+  soldAt DateTime?
+  reservedUntil DateTime?
+}
+model Order {
+  id String @id @default(cuid())
+  invoice String @unique
+  userId String
+  user User @relation(fields:[userId], references:[id])
+  productName String
+  variantName String
+  total Int
+  whatsapp String
+  paymentStatus PaymentStatus @default(PENDING)
+  orderStatus OrderStatus @default(PENDING)
+  deliveryStatus DeliveryStatus @default(WAITING)
+  keyId String? @unique
+  key ProductKey? @relation("OrderPrimaryKey", fields:[keyId], references:[id], onDelete:SetNull)
+  expiresAt DateTime?
+  voucherCode String?
+  note String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  items OrderItem[]
+  refund Refund?
+}
+model OrderItem {
+  id String @id @default(cuid())
+  orderId String
+  order Order @relation(fields:[orderId], references:[id], onDelete:Cascade)
+  productId String
+  product Product @relation(fields:[productId], references:[id])
+  variantId String
+  variant ProductVariant @relation(fields:[variantId], references:[id])
+  quantity Int @default(1)
+  price Int
+  keys ProductKey[]
+}
+model Voucher {
+  id String @id @default(cuid())
+  code String @unique
+  type String @default("FIXED")
+  value Int
+  minPurchase Int @default(0)
+  maxUses Int?
+  usedCount Int @default(0)
+  active Boolean @default(true)
+  startsAt DateTime?
+  expiresAt DateTime?
+  createdAt DateTime @default(now())
+}
+model Banner {
+  id String @id @default(cuid())
+  title String
+  image String
+  href String?
+  active Boolean @default(true)
+  sort Int @default(0)
+  createdAt DateTime @default(now())
+}
+model Media {
+  id String @id @default(cuid())
+  name String
+  url String
+  type String @default("image")
+  createdAt DateTime @default(now())
+}
+model SiteSetting {
+  id String @id @default(cuid())
+  key String @unique
+  value String
+  updatedAt DateTime @updatedAt
+}
+model Activity {
+  id String @id @default(cuid())
+  type String
+  message String
+  demo Boolean @default(false)
+  userId String?
+  user User? @relation(fields:[userId], references:[id], onDelete:SetNull)
+  createdAt DateTime @default(now())
+}

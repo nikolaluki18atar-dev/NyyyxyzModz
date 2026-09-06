@@ -1,0 +1,1 @@
+import {NextResponse} from 'next/server';import {db} from '@/lib/db';export async function GET(){const rows=await db.activity.findMany({where:{demo:false},orderBy:{createdAt:'desc'},take:12});return NextResponse.json(rows)}

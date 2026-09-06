@@ -1,0 +1,3 @@
+import {redirect} from 'next/navigation'; import {getSession} from '@/lib/auth'; import {db} from '@/lib/db';
+export const dynamic='force-dynamic';
+export default async function Orders(){const u=await getSession();if(!u)redirect('/login');await db.order.updateMany({where:{userId:u.id,paymentStatus:'PENDING',orderStatus:'PENDING',expiresAt:{lt:new Date()}},data:{orderStatus:'CANCELLED'}});return <main className="container section"><div className="panel"><div className="eyebrow">ORDER TRACKING</div><h1>Lacak Pesanan</h1><p className="muted">Masukkan invoice melalui URL atau buka daftar pesanan dari akun.</p><a className="btn primary" href="/account">Buka Akun</a></div></main>}

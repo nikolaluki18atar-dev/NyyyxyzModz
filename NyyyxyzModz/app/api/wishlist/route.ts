@@ -1,0 +1,2 @@
+import {NextResponse} from 'next/server';import {getSession} from '@/lib/auth';import {db} from '@/lib/db';
+export async function POST(req:Request){const u=await getSession();if(!u)return NextResponse.json({error:'Login diperlukan'},{status:401});const {productId}=await req.json();const x=await db.wishlist.findUnique({where:{userId_productId:{userId:u.id,productId}}});if(x)await db.wishlist.delete({where:{id:x.id}});else await db.wishlist.create({data:{userId:u.id,productId}});return NextResponse.json({ok:true,added:!x})}
